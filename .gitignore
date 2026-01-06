@@ -1,3 +1,4 @@
+
 # Local environment and credentials
 client/.env
 client/.env.local
@@ -18,3 +19,25 @@ node_modules/
 
 # IDE
 .vs/
+client/node_modules
+client/dist
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+bin/
+obj/
+app.db
+app.db-shm
+app.db-wal
+/Logs/
+/.idea/
+/.vs/
+*.user
+*.suo
+*.userprefs
+*.swp
+*.lock.json
+*.log
+launchSettings.json
