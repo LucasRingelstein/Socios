@@ -1,0 +1,16 @@
+.DS_Store
+bin/
+obj/
+app.db
+app.db-shm
+app.db-wal
+/Logs/
+/.idea/
+/.vs/
+*.user
+*.suo
+*.userprefs
+*.swp
+*.lock.json
+*.log
+launchSettings.json
