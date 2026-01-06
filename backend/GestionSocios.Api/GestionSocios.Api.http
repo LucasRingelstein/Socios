@@ -1,0 +1,6 @@
+@GestionSocios.Api_HostAddress = http://localhost:5150
+
+GET {{GestionSocios.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
