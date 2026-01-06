@@ -1,0 +1,6 @@
+@Socios.Api_HostAddress = http://localhost:5220
+
+GET {{Socios.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
