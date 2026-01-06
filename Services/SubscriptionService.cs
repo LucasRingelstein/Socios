@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Socios.Data;
 using Socios.Dtos;
-using Socios.Dtos;
 using Socios.Models;
 using Socios.Options;
 
@@ -40,13 +39,16 @@ public class SubscriptionService
             _dbContext.Users.Add(user);
         }
 
+        var planName = ResolvePlanName(request);
+        var frequencyType = NormalizeFrequencyType(request.Interval ?? request.FrequencyType);
+
         var subscription = new Subscription
         {
-            PlanName = request.PlanName,
+            PlanName = planName,
             TransactionAmount = request.TransactionAmount,
-            CurrencyId = request.CurrencyId,
+            CurrencyId = string.IsNullOrWhiteSpace(request.CurrencyId) ? "USD" : request.CurrencyId,
             Frequency = request.Frequency <= 0 ? 1 : request.Frequency,
-            FrequencyType = string.IsNullOrWhiteSpace(request.FrequencyType) ? "months" : request.FrequencyType,
+            FrequencyType = frequencyType,
             User = user,
             Status = "pending",
             BackUrl = request.BackUrl ?? _settings.BackUrl,
@@ -61,11 +63,11 @@ public class SubscriptionService
         var preapprovalClient = new PreapprovalClient();
         var preapprovalRequest = new PreapprovalCreateRequest
         {
-            Reason = request.PlanName,
+            Reason = planName,
             ExternalReference = subscription.Id.ToString(),
             AutoRecurring = new PreapprovalAutoRecurringRequest
             {
-                CurrencyId = request.CurrencyId,
+                CurrencyId = subscription.CurrencyId,
                 TransactionAmount = request.TransactionAmount,
                 Frequency = subscription.Frequency,
                 FrequencyType = subscription.FrequencyType
@@ -217,5 +219,42 @@ public class SubscriptionService
         }
 
         MercadoPagoConfig.AccessToken = _settings.AccessToken;
+    }
+
+    private static string ResolvePlanName(CreateSubscriptionRequest request)
+    {
+        if (!string.IsNullOrWhiteSpace(request.PlanName))
+        {
+            return request.PlanName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Description))
+        {
+            return request.Description.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Plan))
+        {
+            return request.Plan.Trim();
+        }
+
+        return "Subscription";
+    }
+
+    private static string NormalizeFrequencyType(string? interval)
+    {
+        if (string.IsNullOrWhiteSpace(interval))
+        {
+            return "months";
+        }
+
+        return interval.ToLowerInvariant() switch
+        {
+            "monthly" or "month" or "months" => "months",
+            "weekly" or "week" or "weeks" => "weeks",
+            "daily" or "day" or "days" => "days",
+            "yearly" or "year" or "years" => "months",
+            _ => "months"
+        };
     }
 }
