@@ -1,0 +1,20 @@
+# Local environment and credentials
+client/.env
+client/.env.local
+client/.env.development
+client/.env.production
+client/.env.test
+appsettings.*.local.json
+
+# Certificates
+certs/
+*.pfx
+*.pem
+
+# Build artifacts
+bin/
+obj/
+node_modules/
+
+# IDE
+.vs/
