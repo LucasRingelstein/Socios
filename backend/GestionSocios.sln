@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GestionSocios.DTOs", "GestionSocios.DTOs\GestionSocios.DTOs.csproj", "{D03225B4-0819-1563-1775-A1B6B4266190}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GestionSocios.Api", "GestionSocios.Api\GestionSocios.Api.csproj", "{8D59181E-C6CE-9BD3-5707-AC6F26929D6C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D03225B4-0819-1563-1775-A1B6B4266190} = {D03225B4-0819-1563-1775-A1B6B4266190}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
