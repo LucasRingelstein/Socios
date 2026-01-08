@@ -1,69 +1,112 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using GestionSocios.Api.Data;
 using GestionSocios.Api.Models;
+using GestionSocios.DTOs; // Asumo que existe este namespace
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GestionSocios.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    // [Authorize] // Comenta esto temporalmente si necesitas probar sin login
     public class SociosController : ControllerBase
     {
-        // Lista en memoria para probar sin base de datos por ahora
-        private static List<Socio> socios = new List<Socio>
+        private readonly UserManager<Socio> _userManager;
+        private readonly ApplicationDbContext _db;
+
+        // CORRECCIÓN 1: Inyectar correctamente el UserManager en el constructor
+        public SociosController(ApplicationDbContext db, UserManager<Socio> userManager)
         {
-            new Socio { Id = 1, Nombre = "Juan", Apellido = "Perez", Edad = 30, DNI = "12345678", Actividad = "Fútbol" }
-        };
+            _db = db;
+            _userManager = userManager;
+        }
 
         // GET: api/Socios
         [HttpGet]
-        public ActionResult<IEnumerable<Socio>> Get()
+        public async Task<ActionResult<IEnumerable<Socio>>> Get() // Cambié SocioDto a Socio para simplificar, ajusta si usas DTO
         {
+            // Usamos _userManager aquí porque ya está optimizado para usuarios
+            var socios = await _userManager.Users
+                .AsNoTracking()
+                .OrderBy(s => s.Apellido)
+                .ThenBy(s => s.Nombre)
+                .ToListAsync();
+
             return Ok(socios);
         }
 
-        // GET api/Socios/5
+        // GET api/Socios/{id_string}
+        // CORRECCIÓN 2: El id debe ser string porque IdentityUser usa strings (GUIDs)
         [HttpGet("{id}")]
-        public ActionResult<Socio> Get(int id)
+        public async Task<ActionResult<Socio>> Get(string id)
         {
-            var socio = socios.FirstOrDefault(s => s.Id == id);
+            // IdentityUser usa Id como string
+            var socio = await _db.Socios.FirstOrDefaultAsync(s => s.Id == id);
+
             if (socio == null) return NotFound();
+
             return Ok(socio);
         }
 
         // POST api/Socios
         [HttpPost]
-        public ActionResult Post([FromBody] Socio nuevoSocio)
+        public async Task<ActionResult<Socio>> Post([FromBody] Socio nuevoSocio)
         {
-            nuevoSocio.Id = socios.Max(s => s.Id) + 1;
-            socios.Add(nuevoSocio);
+            // CORRECCIÓN 3: Al usar Identity, lo ideal es usar _userManager.CreateAsync
+            // para que hashee contraseñas y valide duplicados, pero si lo haces directo a la BD:
+
+            // Generar ID si viene vacío (Identity suele requerir GUIDs)
+            if (string.IsNullOrEmpty(nuevoSocio.Id))
+            {
+                nuevoSocio.Id = Guid.NewGuid().ToString();
+            }
+
+            // Normalizar campos que Identity requiere (Email, UserName, etc.)
+            nuevoSocio.UserName = nuevoSocio.Nombre + nuevoSocio.Apellido; // Ejemplo simple
+            nuevoSocio.NormalizedUserName = nuevoSocio.UserName.ToUpper();
+
+            _db.Socios.Add(nuevoSocio);
+            await _db.SaveChangesAsync();
+
             return CreatedAtAction(nameof(Get), new { id = nuevoSocio.Id }, nuevoSocio);
         }
 
-        // PUT api/Socios/5
+        // PUT api/Socios/{id_string}
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] Socio socioActualizado)
+        public async Task<IActionResult> Put(string id, [FromBody] Socio socioActualizado)
         {
-            var socio = socios.FirstOrDefault(s => s.Id == id);
-            if (socio == null) return NotFound();
+            // Comparar strings
+            if (id != socioActualizado.Id) return BadRequest("El ID no coincide");
 
-            socio.Nombre = socioActualizado.Nombre;
-            socio.Apellido = socioActualizado.Apellido;
-            socio.Edad = socioActualizado.Edad;
-            socio.DNI = socioActualizado.DNI;
-            socio.Domicilio = socioActualizado.Domicilio;
-            socio.Actividad = socioActualizado.Actividad;
-            socio.Sexo = socioActualizado.Sexo;
+            _db.Entry(socioActualizado).State = EntityState.Modified;
+
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_db.Socios.Any(s => s.Id == id)) return NotFound();
+                else throw;
+            }
 
             return NoContent();
         }
 
-        // DELETE api/Socios/5
+        // DELETE api/Socios/{id_string}
         [HttpDelete("{id}")]
-        public ActionResult Delete(int id)
+        public async Task<IActionResult> Delete(string id)
         {
-            var socio = socios.FirstOrDefault(s => s.Id == id);
+            // FindAsync funciona bien con la clave primaria correcta
+            var socio = await _db.Socios.FindAsync(id);
+
             if (socio == null) return NotFound();
 
-            socios.Remove(socio);
+            _db.Socios.Remove(socio);
+            await _db.SaveChangesAsync();
+
             return NoContent();
         }
     }

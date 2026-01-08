@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GestionSocios.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class primeraMigracion : Migration
+    public partial class InicialIdentity : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -30,6 +30,17 @@ namespace GestionSocios.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Apellido = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FechaDeNacimiento = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Edad = table.Column<int>(type: "int", nullable: false),
+                    DNI = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Domicilio = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Actividad = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Sexo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Activo = table.Column<bool>(type: "bit", nullable: false),
+                    FechaAlta = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FechaBaja = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -48,25 +59,6 @@ namespace GestionSocios.Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Socios",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Apellido = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Edad = table.Column<int>(type: "int", nullable: false),
-                    DNI = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Domicilio = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Actividad = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Sexo = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Socios", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -232,9 +224,6 @@ namespace GestionSocios.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUserTokens");
-
-            migrationBuilder.DropTable(
-                name: "Socios");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
