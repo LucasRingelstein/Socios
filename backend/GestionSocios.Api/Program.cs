@@ -1,23 +1,23 @@
 using GestionSocios.Api.Data;
 using GestionSocios.Api.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer; // Nuevo
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens; // Nuevo
-using Microsoft.OpenApi.Models; // Nuevo
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configuración de Controladores y DbContext
+// 1) Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// 2. CONFIGURACIÓN DE SWAGGER (PASO 2) - Aquí es donde pones el bloque del candado
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "GestionSocios API", Version = "v1" });
 
+    // Candado JWT en Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: 'Bearer 12345abcdef'",
@@ -38,41 +38,59 @@ builder.Services.AddSwaggerGen(c =>
                     Id = "Bearer"
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
 
+// 2) DbContext (OJO: ApplicationDbContext ahora hereda de IdentityDbContext<ApplicationUser>)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
 
-// 3. CONFIGURACIÓN DE AUTENTICACIÓN (Para que la API entienda el Token)
-var key = Encoding.ASCII.GetBytes(builder.Configuration.GetSection("Jwt:Key").Value!);
-// Agregá esto antes de builder.Services.AddAuthentication(...)
-builder.Services.AddIdentity<Socio, IdentityRole>(options => {
-    options.Password.RequireDigit = false;
-    options.Password.RequiredLength = 4; // Configuracion relajada de password
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireLowercase = false;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
+// 3) Identity (CAMBIO CLAVE: ahora es ApplicationUser, no Socio)
+builder.Services
+    .AddIdentity<ApplicationUser, IdentityRole>(options =>
+    {
+        // Configuración relajada de password (DEV)
+        options.Password.RequireDigit = false;
+        options.Password.RequiredLength = 4;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequireLowercase = false;
+
+        // Recomendado: evitar problemas con username/email duplicados (ajustá si querés)
+        options.User.RequireUniqueEmail = false;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
+// 4) JWT Auth
+var keyString = builder.Configuration.GetSection("Jwt:Key").Value;
+if (string.IsNullOrWhiteSpace(keyString))
+    throw new InvalidOperationException("Falta configurar Jwt:Key en appsettings.json");
+
+var key = Encoding.ASCII.GetBytes(keyString);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options => {
+    .AddJwtBearer(options =>
+    {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(key),
+
             ValidateIssuer = false,
-            ValidateAudience = false
+            ValidateAudience = false,
+
+            // opcional: tolerancia 0 a expiración
+            ClockSkew = TimeSpan.Zero
         };
     });
 
 var app = builder.Build();
 
-// 4. PIPELINE (ORDEN CRÍTICO)
+// 5) Pipeline (orden crítico)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -81,7 +99,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// IMPORTANTE: Authentication va antes que Authorization
+// Auth antes que Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
